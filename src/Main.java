@@ -8,5 +8,16 @@ public class Main {
         StdAudio.play(fullSound);
         StdAudio.drain();
 
+        int start = 0;
+        int end = fullSound.length / 3;
+
+        double[] oneBird = new double[end - start];
+        for (int i = 0; i < oneBird.length; i++) {
+            oneBird[i] = fullSound[start + i];
+        }
+
+        StdAudio.play(oneBird);
+        StdAudio.drain();
+
     }
 }
