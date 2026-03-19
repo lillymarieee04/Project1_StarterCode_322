@@ -89,33 +89,40 @@ public class Main {
         return samples;
     }
 
-    // C
-    private static double[] computeBarHeights(double[] samples, int numBars) {
-        double[] heights = new double[numBars];
+    // C — MinMax algorithm: track both the minimum and maximum sample per bar
+    private static double[][] computeBarHeights(double[] samples, int numBars) {
+        double[][] heights = new double[numBars][2]; // [bar][0] = min, [bar][1] = max
         int total = samples.length;
         for (int bar = 0; bar < numBars; bar++) {
             int start = (int) ((long) bar       * total / numBars);
             int end   = (int) ((long) (bar + 1) * total / numBars);
             if (end > total) end = total;
-            double maxAbs = 0.0;
+            double min = 0.0;
+            double max = 0.0;
             for (int i = start; i < end; i++) {
-                double abs = Math.abs(samples[i]);
-                if (abs > maxAbs) maxAbs = abs;
+                if (samples[i] < min) min = samples[i];
+                if (samples[i] > max) max = samples[i];
             }
-            heights[bar] = maxAbs;
+            heights[bar][0] = min; // most negative sample in slice
+            heights[bar][1] = max; // most positive sample in slice
         }
         return heights;
     }
 
-    // D
-    private static void drawBar(double xCenter, double barWidth, double height, int bar, int numBars) {
+    // D — draw bar using min and max so it extends asymmetrically above and below center
+    private static void drawBar(double xCenter, double barWidth, double min, double max, int bar, int numBars) {
         float hue = (float) bar / numBars;
         StdDraw.setPenColor(java.awt.Color.getHSBColor(hue, 0.85f, 0.85f));
-        // Draw a very thin rectangle extending up and down from center
-        StdDraw.filledRectangle(xCenter, 0.5, barWidth * 0.5, height / 2.0);
+
+        // center of bar sits between min and max in canvas space
+        // canvas y=0.5 is the midpoint; samples in [-1,1] are scaled by 0.5
+        double barCenter  = 0.5 + (max + min) / 2.0 * 0.5;
+        double halfHeight = (max - min) / 2.0 * 0.5;
+
+        StdDraw.filledRectangle(xCenter, barCenter, barWidth * 0.45, halfHeight);
     }
 
-    private static void playAndVisualize(double[] samples, double[] barHeights) {
+    private static void playAndVisualize(double[] samples, double[][] barHeights) {
         int numBars = barHeights.length;
         int total   = samples.length;
         double barWidth = 1.0 / numBars;
@@ -126,7 +133,8 @@ public class Main {
         StdDraw.enableDoubleBuffering();
         StdDraw.clear(StdDraw.WHITE);
 
-        for (int bar = 0; bar < numBars; bar++) {
+        int bar = 0;                      // initialize
+        while (bar < numBars) {           // condition
             int start = (int) ((long) bar       * total / numBars);
             int end   = (int) ((long) (bar + 1) * total / numBars);
             if (end > total) end = total;
@@ -136,8 +144,10 @@ public class Main {
             StdAudio.play(slice);
 
             double xCenter = (bar + 0.5) * barWidth;
-            drawBar(xCenter, barWidth, barHeights[bar], bar, numBars);
+            drawBar(xCenter, barWidth, barHeights[bar][0], barHeights[bar][1], bar, numBars);
             StdDraw.show();
+
+            bar++;                        // increment
         }
 
         StdAudio.drain();
@@ -188,7 +198,7 @@ public class Main {
         }
 
         // C
-        double[] barHeights = computeBarHeights(samples, numBars);
+        double[][] barHeights = computeBarHeights(samples, numBars);
 
         // D
         playAndVisualize(samples, barHeights);
